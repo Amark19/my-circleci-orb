@@ -15,7 +15,20 @@ cleanup_env_var() {
 set_env_var() {
   if [[ -z "$CLEANUP_ENV_VAR" || "$CLEANUP_ENV_VAR" != "true" ]]; then
     echo "Setting BS_env_vars in BASH_ENV"
-    echo "export BS_ENV_VARS=$env_var_value" >> "$BASH_ENV"
+    decoded_json=$(echo "$env_var_value" | base64 --decode 2>/dev/null)
+    # Check if the decoded value is valid JSON
+    if echo "$decoded_json" | jq empty 2>/dev/null; then
+        echo "Valid JSON detected."
+
+        # Print formatted JSON for debugging
+        echo "$decoded_json" | jq .
+
+        # Export JSON to environment (compact format)
+        echo "export BS_ENV_VARS='$(echo "$decoded_json" | jq -c .)'" >> "$BASH_ENV"
+    else
+        echo "Invalid JSON detected. Exiting."
+        exit 0
+    fi
   fi
 }
 
@@ -44,7 +57,6 @@ buildEnvironmentVariable() {
   echo "$envKey"_"$(IFS=_; echo "${sanitized_values[*]}")"
 }
 
-echo "CircleCI token : $CIRCLECI_TOKEN"
 # Check whether CircleCI token is present
 if [[ -z "$CIRCLECI_TOKEN" ]]; then
   echo "CircleCI token not present in environment variables. Setting no tests to rerun."
@@ -54,8 +66,6 @@ fi
 # Fetch workflow details
 WORKFLOW_RESPONSE=$(curl -s -H "Circle-Token: ${CIRCLECI_TOKEN}" \
                         "https://circleci.com/api/v2/workflow/${CIRCLE_WORKFLOW_ID}")
-
-echo "WORKFLOW_RESPONSE : $WORKFLOW_RESPONSE"
 
 if echo "$WORKFLOW_RESPONSE" | jq empty 2>/dev/null; then
   # Extract workflow details only if JSON is valid
