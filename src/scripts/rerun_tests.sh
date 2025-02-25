@@ -71,9 +71,16 @@ if echo "$WORKFLOW_RESPONSE" | jq empty 2>/dev/null; then
   # Extract workflow details only if JSON is valid
   WORKFLOW_NAME=$(echo "$WORKFLOW_RESPONSE" | jq -r '.name // empty')
   PROJECT_SLUG=$(echo "$WORKFLOW_RESPONSE" | jq -r '.project_slug // empty')
+  WORKFLOW_TAG=$(echo "$WORKFLOW_RESPONSE" | jq -r '.tag // empty')
 
   if [[ -z "$WORKFLOW_NAME" || -z "$PROJECT_SLUG" ]]; then
     echo "Error: Missing workflow name or project slug in API response.Setting no tests to rerun"
+    exit 0
+  fi
+  if [[ "$WORKFLOW_TAG" == "rerun-workflow-from-beginning" ]]; then
+    echo "Workflow is a rerun from the beginning. Proceeding with env var operations..."
+  else
+    echo "Workflow is not a rerun from the beginning (tag: $WORKFLOW_TAG). Skipping env var operations."
     exit 0
   fi
 else
