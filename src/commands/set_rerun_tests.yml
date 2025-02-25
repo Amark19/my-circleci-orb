@@ -1,0 +1,14 @@
+description: "Set the rerun tests in an workflow"
+
+parameters:
+  delete_env_var:
+    description: "Delete the environment variable"
+    required: false
+    default: true
+
+steps:
+  - run:
+      name: Set Rerun Tests
+      command: <<include(scripts/rerun_tests.sh)>>
+      environment:
+        DELETE_ENV_VAR: << parameters.delete_env_var >>
